@@ -1,16 +1,15 @@
 <template>
   <div id="dashboard">
-    <div class="header">
-      <h1>Face Similarity and Analysis Dashboard</h1>
-    </div>
+    <div class="content-wrapper">
+      <div class="header">
+        <h1>Face Similarity and Analysis Dashboard</h1>
+      </div>
 
-    <div class="main-content">
-      <!-- Dashboard Navigation Buttons -->
-      <div class="button-container">
-        <button @click="goToFaceComparison">Go to Face Comparison</button>
-        <button @click="goToAnalyzePhoto">
-          Go to Age, Gender, and Emotion Analysis
-        </button>
+      <div class="main-content">
+        <!-- Dashboard Navigation Buttons -->
+        <div class="button-container">
+          <button @click="goToFaceComparison">Try Now!</button>
+        </div>
       </div>
     </div>
   </div>
@@ -24,26 +23,41 @@ export default {
     goToFaceComparison() {
       this.$router.push("/face-comparison");
     },
-    // Method to navigate to the Age, Gender, and Emotion Analysis page
-    goToAnalyzePhoto() {
-      this.$router.push("/analyze-photo");
-    },
   },
 };
 </script>
 
 <style>
 #dashboard {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
   font-family: Arial, sans-serif;
-  padding: 20px;
+  margin: 0;
+  padding: 0;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
+  padding: 20px;
+  max-width: 100%;
+  width: 100%;
 }
 
 .header {
   background-color: #4caf50;
   color: white;
-  padding: 10px;
-  border-radius: 5px;
+  padding: 20px;
+  border-radius: 10px;
+  font-size: 2rem;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .main-content {
@@ -52,30 +66,44 @@ export default {
 
 .button-container {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  margin-bottom: 20px;
 }
 
 button {
-  padding: 15px;
-  font-size: 1.2rem;
+  padding: 15px 30px;
+  font-size: 1rem;
   cursor: pointer;
+  border: none;
+  border-radius: 10px;
   background-color: #4caf50;
   color: white;
-  border: none;
-  margin: 10px;
-  border-radius: 5px;
-  width: 250px;
+  transition: background-color 0.3s;
 }
 
 button:hover {
   background-color: #45a049;
 }
 
-button:disabled {
-  background-color: #ddd;
-  cursor: not-allowed;
+@media (max-width: 768px) {
+  .header {
+    font-size: 1.5rem;
+  }
+
+  button {
+    padding: 10px 20px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    font-size: 1.2rem;
+  }
+
+  button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
 }
 </style>
