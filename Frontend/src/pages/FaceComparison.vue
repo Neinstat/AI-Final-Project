@@ -1,49 +1,47 @@
 <template>
   <div id="app">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="logo">FaceSim</div>
       <nav>
         <ul>
           <li :class="{ active: currentPage === 'home' }">
-            <a href="#" @click.prevent="currentPage = 'home'"
-              >Face Comparison</a
-            >
+            <a href="#" @click.prevent="navigateTo('home')">Face Comparison</a>
           </li>
           <li :class="{ active: currentPage === 'analyze-photo' }">
-            <a href="#" @click.prevent="currentPage = 'analyze-photo'"
+            <a href="#" @click.prevent="navigateTo('analyze-photo')"
               >Analyze Photo</a
             >
           </li>
           <li :class="{ active: currentPage === 'about' }">
-            <a href="#" @click.prevent="currentPage = 'about'">About Us</a>
+            <a href="#" @click.prevent="navigateTo('about')">About Us</a>
           </li>
           <li :class="{ active: currentPage === 'contact' }">
-            <a href="#" @click.prevent="currentPage = 'contact'">Contact</a>
+            <a href="#" @click.prevent="navigateTo('contact')">Contact</a>
           </li>
         </ul>
       </nav>
     </aside>
 
-    <!-- Main Content -->
     <div class="main">
       <header class="header">
-        <h1>Face Similarity Checker</h1>
+        <h1 v-if="currentPage === 'home'">Face Similarity Checker</h1>
+        <h1 v-else-if="currentPage === 'analyze-photo'">Photo Analyzer</h1>
+        <h1 v-else-if="currentPage === 'about'">About Us</h1>
+        <h1 v-else-if="currentPage === 'contact'">Contact</h1>
       </header>
 
       <section class="page-content">
-        <!-- Home Page -->
         <div v-if="currentPage === 'home'" class="page home-page">
           <section class="card">
             <div class="upload-section">
               <label
                 class="file-drop"
                 @dragover.prevent
-                @drop.prevent="onDrop($event, 1)"
+                @drop.prevent="onDropComparison($event, 1)"
               >
                 <input
                   type="file"
-                  ref="file1"
+                  ref="file1Comparison"
                   @change="uploadImage1"
                   accept="image/*"
                   hidden
@@ -54,11 +52,11 @@
               <label
                 class="file-drop"
                 @dragover.prevent
-                @drop.prevent="onDrop($event, 2)"
+                @drop.prevent="onDropComparison($event, 2)"
               >
                 <input
                   type="file"
-                  ref="file2"
+                  ref="file2Comparison"
                   @change="uploadImage2"
                   accept="image/*"
                   hidden
@@ -67,6 +65,26 @@
                 <img v-if="image2Url" :src="image2Url" alt="Preview 2" />
               </label>
             </div>
+
+            <div class="card-section model-selection-section">
+              <label for="model-select" class="form-label"
+                >Choose Comparison Model:</label
+              >
+              <select
+                id="model-select"
+                v-model="selectedModel"
+                class="form-select"
+              >
+                <option
+                  v-for="model in availableModels"
+                  :key="model.value"
+                  :value="model.value"
+                >
+                  {{ model.text }}
+                </option>
+              </select>
+            </div>
+
             <button
               class="btn-predict"
               @click="predictSimilarity"
@@ -75,28 +93,38 @@
               <span v-if="!isProcessing">Predict Similarity</span>
               <span v-else class="btn-loading">Processing...</span>
             </button>
-            <div v-if="result !== null" class="result-box">
-              Similarity: <strong>{{ result }}%</strong>
+            <div v-if="comparisonResult !== null" class="result-box">
+              Similarity:
+              <strong
+                >{{
+                  comparisonResult.similarity_percentage.toFixed(2)
+                }}%</strong
+              >
+              <br />
+              Distance:
+              <strong>{{ comparisonResult.distance.toFixed(4) }}</strong>
+              <br />
+              Verified: <strong>{{ comparisonResult.verified }}</strong>
+              <br />
+              Model Used: <strong>{{ comparisonResult.model_used }}</strong>
             </div>
-            <div v-if="error" class="error-box">
-              {{ error }}
+            <div v-if="comparisonError" class="error-box">
+              {{ comparisonError }}
             </div>
           </section>
         </div>
 
-        <!-- About Page -->
         <div v-if="currentPage === 'about'" class="page about-page">
           <div class="card">
             <h2>About Us</h2>
             <p>
               Welcome to FaceSim! We are dedicated to providing state-of-the-art
-              face similarity detection services. Our team leverages AI and
-              machine learning to deliver accurate results in real-time.
+              face similarity detection and analysis services. Our team
+              leverages AI and machine learning to deliver accurate results.
             </p>
           </div>
         </div>
 
-        <!-- Contact Page -->
         <div v-if="currentPage === 'contact'" class="page contact-page">
           <div class="card">
             <h2>Contact</h2>
@@ -110,7 +138,6 @@
           </div>
         </div>
 
-        <!-- Analyze Photo Page -->
         <div
           v-if="currentPage === 'analyze-photo'"
           class="page analyze-photo-page"
@@ -118,58 +145,53 @@
           <section class="card">
             <h2 class="section-title">Analyze Age, Gender, and Emotion</h2>
             <div class="upload-section">
-              <!-- Upload Image Input -->
               <label
                 class="file-drop"
                 @dragover.prevent
-                @drop.prevent="onDrop($event, 1)"
+                @drop.prevent="onDropAnalyze"
               >
                 <input
                   type="file"
-                  ref="file1"
-                  @change="handleFileChange"
+                  ref="analyzeFile"
+                  @change="handleAnalysisFileChange"
                   accept="image/*"
                   hidden
                 />
-                <span v-if="!imagePreview"
-                  >Drop or click to upload an image</span
+                <span v-if="!analysisImagePreview"
+                  >Drop or click to upload an image for analysis</span
                 >
                 <img
-                  v-if="imagePreview"
-                  :src="imagePreview"
-                  alt="Image Preview"
+                  v-if="analysisImagePreview"
+                  :src="analysisImagePreview"
+                  alt="Image Preview for Analysis"
                 />
               </label>
             </div>
 
             <div class="submit-section">
-              <!-- Analyze Button -->
               <button
                 @click="submitAnalysis"
-                :disabled="isLoading"
+                :disabled="!analysisImage || analysisIsLoading"
                 class="btn-submit"
               >
-                <span v-if="!isLoading">Analyze Image</span>
+                <span v-if="!analysisIsLoading">Analyze Image</span>
                 <span v-else class="btn-loading">Processing...</span>
               </button>
             </div>
 
-            <!-- Results -->
             <div v-if="analysisResults" class="result">
               <h3>Age: {{ analysisResults.age }}</h3>
               <h3>Gender: {{ analysisResults.gender }}</h3>
               <h3>Emotion: {{ analysisResults.emotion }}</h3>
             </div>
 
-            <!-- Loading Overlay -->
-            <div v-if="isLoading" class="loading-overlay">
+            <div v-if="analysisIsLoading" class="loading-overlay">
               <div class="spinner"></div>
               <p>Processing...</p>
             </div>
 
-            <!-- Error Message -->
-            <div v-if="errorMessage" class="error">
-              <p>{{ errorMessage }}</p>
+            <div v-if="analysisErrorMessage" class="error">
+              <p>{{ analysisErrorMessage }}</p>
             </div>
           </section>
         </div>
@@ -186,37 +208,70 @@
 import axios from "axios";
 
 export default {
-  name: "FaceComparison",
+  name: "FaceApplication", // Nama komponen diubah agar lebih umum
   data() {
     return {
-      currentPage: "home",
+      currentPage: "home", // Halaman default
+      // Data untuk Face Comparison
       image1: null,
       image2: null,
       image1Url: null,
       image2Url: null,
-      result: null,
-      error: null,
-      isProcessing: false,
-      image: null,
-      imagePreview: null,
-      analysisResults: null,
-      errorMessage: null,
-      isLoading: false,
+      comparisonResult: null,
+      comparisonError: null,
+      isProcessing: false, // Loading state untuk comparison
+      selectedModel: "DeepFace", // Model default untuk comparison
+      availableModels: [
+        // Daftar model yang bisa dipilih
+        { value: "VGG-Face", text: "VGG-Face" },
+        { value: "Facenet", text: "Facenet" },
+        { value: "Facenet512", text: "Facenet512" },
+        { value: "OpenFace", text: "OpenFace" },
+        { value: "DeepFace", text: "DeepFace (Default)" },
+        { value: "ArcFace", text: "ArcFace" },
+        // { value: "Dlib", text: "Dlib SFace" },
+      ],
+
+      // Data untuk Analyze Photo
+      analysisImage: null, // File untuk analisis
+      analysisImagePreview: null, // URL preview untuk gambar analisis
+      analysisResults: null, // Hasil analisis (usia, gender, emosi)
+      analysisErrorMessage: null,
+      analysisIsLoading: false, // Loading state untuk analisis
     };
   },
   methods: {
-    onDrop(e, slot) {
+    navigateTo(page) {
+      this.currentPage = page;
+      // Reset state halaman sebelumnya jika perlu
+      this.resetComparisonState();
+      this.resetAnalysisState();
+    },
+
+    // --- Metode untuk Face Comparison ---
+    resetComparisonState() {
+      this.image1 = null;
+      this.image2 = null;
+      this.image1Url = null;
+      this.image2Url = null;
+      this.comparisonResult = null;
+      this.comparisonError = null;
+      this.isProcessing = false;
+    },
+    onDropComparison(e, slot) {
       const file = e.dataTransfer.files[0];
       if (!file || !file.type.startsWith("image/")) return;
       if (slot === 1) {
-        this.$refs.file1.files = e.dataTransfer.files;
+        // Menggunakan $refs yang spesifik untuk comparison
+        if (this.$refs.file1Comparison)
+          this.$refs.file1Comparison.files = e.dataTransfer.files;
         this.uploadImage1({ target: { files: e.dataTransfer.files } });
       } else {
-        this.$refs.file2.files = e.dataTransfer.files;
+        if (this.$refs.file2Comparison)
+          this.$refs.file2Comparison.files = e.dataTransfer.files;
         this.uploadImage2({ target: { files: e.dataTransfer.files } });
       }
     },
-
     uploadImage1(event) {
       const file = event.target.files[0];
       if (!file) {
@@ -226,10 +281,9 @@ export default {
       }
       this.image1 = file;
       this.image1Url = URL.createObjectURL(this.image1);
-      this.result = null;
-      this.error = null;
+      this.comparisonResult = null;
+      this.comparisonError = null;
     },
-
     uploadImage2(event) {
       const file = event.target.files[0];
       if (!file) {
@@ -239,113 +293,168 @@ export default {
       }
       this.image2 = file;
       this.image2Url = URL.createObjectURL(this.image2);
-      this.result = null;
-      this.error = null;
+      this.comparisonResult = null;
+      this.comparisonError = null;
     },
-
     async predictSimilarity() {
       if (!this.image1 || !this.image2) {
-        this.error = "Please upload both images.";
+        this.comparisonError = "Please upload both images.";
         return;
       }
       this.isProcessing = true;
-      this.error = null;
-      this.result = null;
+      this.comparisonError = null;
+      this.comparisonResult = null;
 
       try {
+        // Upload image 1
         const formData1 = new FormData();
         formData1.append("image1", this.image1);
-        await axios.post("http://127.0.0.1:5000/upload_image1", formData1, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await axios.post("http://127.0.0.1:5000/upload_image1", formData1);
 
+        // Upload image 2
         const formData2 = new FormData();
         formData2.append("image2", this.image2);
-        await axios.post("http://127.0.0.1:5000/upload_image2", formData2, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await axios.post("http://127.0.0.1:5000/upload_image2", formData2);
 
-        const res = await axios.post("http://127.0.0.1:5000/compare_photos");
-        this.result = parseFloat(res.data.similarity_percentage).toFixed(2);
+        // Compare photos dengan model yang dipilih
+        const res = await axios.post("http://127.0.0.1:5000/compare_photos", {
+          model_name: this.selectedModel, // Kirim model yang dipilih
+        });
+        this.comparisonResult = res.data;
       } catch (err) {
-        if (err.response) {
-          this.error =
-            err.response.data?.error || `Error: ${err.response.status}`;
-        } else if (err.request) {
-          this.error =
-            "No response from server. Check if the backend is running.";
-        } else {
-          this.error = `Error: ${err.message}`;
-        }
+        this.comparisonError =
+          err.response?.data?.error ||
+          err.message ||
+          "An error occurred during similarity prediction.";
       } finally {
         this.isProcessing = false;
       }
     },
 
-    handleFileChange(event) {
+    // --- Metode untuk Analyze Photo ---
+    resetAnalysisState() {
+      this.analysisImage = null;
+      this.analysisImagePreview = null;
+      this.analysisResults = null;
+      this.analysisErrorMessage = null;
+      this.analysisIsLoading = false;
+    },
+    onDropAnalyze(e) {
+      const file = e.dataTransfer.files[0];
+      if (!file || !file.type.startsWith("image/")) return;
+      // Menggunakan $refs yang spesifik untuk analysis jika diperlukan & memanggil handler yang benar
+      if (this.$refs.analyzeFile)
+        this.$refs.analyzeFile.files = e.dataTransfer.files;
+      this.handleAnalysisFileChange({
+        target: { files: e.dataTransfer.files },
+      });
+    },
+    handleAnalysisFileChange(event) {
       const file = event.target.files[0];
       if (file) {
-        this.image = file;
+        this.analysisImage = file;
         const reader = new FileReader();
         reader.onload = (e) => {
-          this.imagePreview = e.target.result;
+          this.analysisImagePreview = e.target.result;
         };
         reader.readAsDataURL(file);
+        this.analysisResults = null;
+        this.analysisErrorMessage = null;
+      } else {
+        this.analysisImage = null;
+        this.analysisImagePreview = null;
       }
     },
-
     async submitAnalysis() {
-      if (!this.image) {
-        this.errorMessage = "Please upload an image for analysis.";
+      if (!this.analysisImage) {
+        this.analysisErrorMessage = "Please upload an image for analysis.";
         return;
       }
-
-      const formData = new FormData();
-      formData.append("image1", this.image);
-
-      this.isLoading = true;
-      this.errorMessage = null;
+      this.analysisIsLoading = true;
+      this.analysisErrorMessage = null;
       this.analysisResults = null;
 
+      const formData = new FormData();
+      // Backend untuk analysis menggunakan 'image1.jpg' setelah diupload oleh /upload_image1
+      // Jadi, kita harus mengupload gambar analisis ke endpoint /upload_image1 terlebih dahulu.
+      formData.append("image1", this.analysisImage);
+
       try {
-        const uploadResponse = await axios.post(
-          "http://127.0.0.1:5000/upload_image1",
-          formData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
-
-        if (uploadResponse.data.error) {
-          this.errorMessage = "There was an error uploading the image.";
-          this.isLoading = false;
-          return;
-        }
-
+        await axios.post("http://127.0.0.1:5000/upload_image1", formData);
         const response = await axios.post(
           "http://127.0.0.1:5000/analyze_photo"
         );
-
-        if (response.data.age !== undefined) {
-          this.analysisResults = response.data;
-        } else {
-          this.errorMessage = "There was an error processing the image.";
+        this.analysisResults = response.data;
+        if (response.data.error) {
+          // Jika backend mengembalikan error dalam response.data
+          this.analysisErrorMessage = response.data.error;
+          this.analysisResults = null;
         }
       } catch (error) {
-        this.errorMessage = "An error occurred while making the API request.";
+        this.analysisErrorMessage =
+          error.response?.data?.error ||
+          error.message ||
+          "An error occurred during analysis.";
       } finally {
-        this.isLoading = false;
+        this.analysisIsLoading = false;
       }
-    },
-
-    goBack() {
-      this.$router.push("/"); // Navigate back to the dashboard (App.vue)
     },
   },
 };
 </script>
 
 <style>
+/* ... (CSS dari respons sebelumnya tetap sama) ... */
+/* Tambahan CSS untuk Model Selection */
+
+.card-section {
+  /* Kelas umum untuk padding dan margin dalam card */
+  margin-bottom: 1.5rem; /* Sesuaikan dengan kebutuhan */
+  width: 100%;
+}
+
+.model-selection-section {
+  display: flex;
+  flex-direction: column; /* Label di atas dropdown */
+  align-items: flex-start; /* Rata kiri */
+  gap: 0.5rem; /* Jarak antara label dan select */
+}
+
+.form-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.form-select {
+  width: 100%; /* Lebar penuh */
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+  background-color: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  appearance: none; /* Hilangkan tampilan default browser */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3E%3C/svg%3E"); /* Kustom panah dropdown */
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1em;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 0.2rem rgba(var(--blue-primary-rgb, 48, 97, 232), 0.25); /* Definisikan --blue-primary-rgb jika perlu atau gunakan hex */
+}
+
+/* Perbaikan untuk --blue-primary-rgb (tambahkan ini di :root jika belum ada, atau ganti rgba dengan warna solid) */
+:root {
+  /* ... variabel lain ... */
+  --blue-primary-rgb: 48, 97, 232; /* RGB dari #3061e8 */
+}
+
+/* CSS dari respons sebelumnya yang relevan harus disertakan di sini */
 /* Global Resets & Box Sizing */
 html,
 body {
@@ -369,6 +478,7 @@ body {
 :root {
   --blue-dark: #0a2540; /* Biru tua untuk sidebar, aksi primer */
   --blue-primary: #3061e8; /* Biru primer yang lebih cerah untuk aksen dan interaksi */
+  --blue-primary-rgb: 48, 97, 232; /* RGB dari #3061e8 */
   --blue-accent: #596893; /* Biru aksen (sebelumnya primer) untuk teks sekunder atau elemen pendukung */
   --blue-light: #e0e7ff; /* Biru muda untuk highlight atau latar belakang sekunder */
   --bg: #f7f9fc; /* Latar belakang netral yang sangat terang */
