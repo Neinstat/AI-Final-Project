@@ -116,37 +116,58 @@
           class="page analyze-photo-page"
         >
           <section class="card">
-            <h2>Analyze Age, Gender, and Emotion</h2>
+            <h2 class="section-title">Analyze Age, Gender, and Emotion</h2>
             <div class="upload-section">
-              <h3>Upload Image for Analysis</h3>
-              <input type="file" @change="handleFileChange" accept="image/*" />
-              <div v-if="imagePreview">
-                <h4>Preview Image:</h4>
+              <!-- Upload Image Input -->
+              <label
+                class="file-drop"
+                @dragover.prevent
+                @drop.prevent="onDrop($event, 1)"
+              >
+                <input
+                  type="file"
+                  ref="file1"
+                  @change="handleFileChange"
+                  accept="image/*"
+                  hidden
+                />
+                <span v-if="!imagePreview"
+                  >Drop or click to upload an image</span
+                >
                 <img
+                  v-if="imagePreview"
                   :src="imagePreview"
                   alt="Image Preview"
-                  class="preview-img"
                 />
-              </div>
+              </label>
             </div>
 
-            <div>
-              <button @click="submitAnalysis" :disabled="isLoading">
-                Analyze Image
+            <div class="submit-section">
+              <!-- Analyze Button -->
+              <button
+                @click="submitAnalysis"
+                :disabled="isLoading"
+                class="btn-submit"
+              >
+                <span v-if="!isLoading">Analyze Image</span>
+                <span v-else class="btn-loading">Processing...</span>
               </button>
             </div>
 
+            <!-- Results -->
             <div v-if="analysisResults" class="result">
               <h3>Age: {{ analysisResults.age }}</h3>
               <h3>Gender: {{ analysisResults.gender }}</h3>
               <h3>Emotion: {{ analysisResults.emotion }}</h3>
             </div>
 
+            <!-- Loading Overlay -->
             <div v-if="isLoading" class="loading-overlay">
               <div class="spinner"></div>
               <p>Processing...</p>
             </div>
 
+            <!-- Error Message -->
             <div v-if="errorMessage" class="error">
               <p>{{ errorMessage }}</p>
             </div>
