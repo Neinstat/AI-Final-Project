@@ -1,4 +1,5 @@
-const { defineConfig } = require('@vue/cli-service')
-module.exports = defineConfig({
-  transpileDependencies: true
-})
+// File: vue.config.js (Ini adalah file baru yang Anda buat)
+
+module.exports = {
+  runtimeCompiler: true,
+};
